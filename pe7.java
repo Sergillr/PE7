@@ -3,6 +3,7 @@ import java.util.ArrayList;
 
 public class pe7 {
 
+    // Tauler inicial (No utilitzo for per el debugging més fàcil XD)
     static char[][] tauler = {
             { 'T', 'C', 'A', 'Q', 'K', 'A', 'C', 'T' },
             { 'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P' },
@@ -13,42 +14,48 @@ public class pe7 {
             { 'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p' },
             { 't', 'c', 'a', 'q', 'k', 'a', 'c', 't' }
     };
+
+    // Inici de variables de control de joc i historial
     static boolean gameover = false;
     static boolean reiBlancMoviment = false, reiNegreMoviment = false;
     static boolean torreBlancaAMoviment = false, torreBlancaHMoviment = false;
     static boolean torreNegreAMoviment = false, torreNegreHMoviment = false;
+    static ArrayList<Character> pecesCapturades = new ArrayList<>();
     static ArrayList<String> historialMoviments = new ArrayList<>();
     static Scanner scanner = new Scanner(System.in);
+    static String jugadorBlanc;
+    static String jugadorNegre;
 
+    // Main
     public static void main(String[] args) {
         System.out.println("Benvingut al joc d'escacs!");
         scanner.nextLine();
-        System.out.println("Format de moviment: e2 e4 (lletra columna + número fila)");
+
+        jugadorBlanc = demanarNomJugador("Nom del jugador blanc: ");
+        jugadorNegre = demanarNomJugador("Nom del jugador negre: ");
+
+        System.out.println("En cas de voler abandonar el joc, escriu 'Abandonar'");
         scanner.nextLine();
-        System.out.println("Les peces blanques es representen amb majúscules i les negres amb minúscules.");
-        scanner.nextLine();
+
+        System.out.println("Format de moviment: AX BY (lletra columna + número fila)");
         System.out.println("BLAQUES comencen primer.\n");
+
         int torn = 0;
+
+        // Bucle principal del joc
         do {
             imprimirTauler();
-            try {
-                if (estaEnEscac(torn)) {
-                    System.out.println("ESCAC al rei de les " + (torn == 0 ? "blanques" : "negres"));
-                    if (esEscacIMat(torn)) {
-                        System.out.println("JAQUE MATE!\n Guanya " + (torn == 0 ? "negres" : "blanques"));
-                        gameover = true;
-                        System.out.println("Historial de moviments:\n " + historialMoviments);
-                        continue;
-                    }
-                }
-            } catch (Exception e) {
-                System.out.println("Error al comprovar escac: " + e.getMessage());
-            }
 
             if (!gameover) {
-                System.out.println("Torn de les peces " + (torn == 0 ? "blanques" : "negres"));
+                System.out.println("Torn de " + (torn == 0 ? jugadorBlanc : jugadorNegre));
                 System.out.print("Moviment: ");
                 String moviment = scanner.nextLine();
+
+                if (moviment.equalsIgnoreCase("Abandonar")) {
+                    gameover = true;
+                    break;
+                }
+
                 if (moviment.length() != 5 || moviment.charAt(2) != ' ')
                     continue;
 
@@ -59,21 +66,11 @@ public class pe7 {
                     int columnaDestinacio = moviment.charAt(3) - 'a';
 
                     char origen = tauler[filaOrigen][columnaOrigen];
+                    char destinacio = tauler[filaDestinacio][columnaDestinacio];
 
                     if ((torn == 0 && !esBlanca(origen)) || (torn == 1 && esBlanca(origen))) {
                         System.out.println("No es el torn de aquestes peces");
                         continue;
-                    }
-
-                    if (Character.toLowerCase(origen) == 'k' && Math.abs(columnaDestinacio - columnaOrigen) == 2) {
-                        if (potEnrocar(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen)) {
-                            realitzarEnroque(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen);
-                            torn = 1 - torn;
-                            continue;
-                        } else {
-                            System.out.println("Moviment invàlid (enroc)");
-                            continue;
-                        }
                     }
 
                     if (!potMoure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen) &&
@@ -82,155 +79,49 @@ public class pe7 {
                         continue;
                     }
 
-                    actualitzarFlags(origen, filaOrigen, columnaOrigen);
-
+                    // Simular moviment per comprovar si deixa el rei en escac
                     tauler[filaDestinacio][columnaDestinacio] = origen;
                     tauler[filaOrigen][columnaOrigen] = ' ';
-                    torn = 1 - torn;
+
+                    if (estaEnEscac(torn)) {
+                        tauler[filaOrigen][columnaOrigen] = origen;
+                        tauler[filaDestinacio][columnaDestinacio] = destinacio;
+                        System.out.println("No pots deixar el teu rei en escac");
+                        continue;
+                    }
+
+                    // Guardar peça capturada
+                    if (destinacio != ' ') {
+                        pecesCapturades.add(destinacio);
+                    }
+
                     historialMoviments.add(moviment);
 
-                } catch (IndexOutOfBoundsException e) {
-                    System.out.println("Moviment fora del tauler, prova de nou");
-                } catch (NumberFormatException e) {
-                    System.out.println("Format de moviment invàlid, prova de nou");
-                } catch (NullPointerException e) {
-                    System.out.println("Error intern amb la peça seleccionada");
+                    // Actualitzar flags de moviment de rei i torres
+                    actualitzarFlags(origen, filaOrigen, columnaOrigen);
+
+                    torn = 1 - torn;
+
+                    // Comprovar escac i mat després del moviment
+                    if (esEscacIMat(torn)) {
+                        imprimirTauler();
+                        System.out.println("ESCAC I MAT!");
+                        System.out.println("Guanya " + (torn == 0 ? jugadorNegre : jugadorBlanc) + "!");
+                        System.out.println("Historial de moviments: " + historialMoviments);
+                        gameover = true;
+                    }
+
+                    // Coronació si el peó arriba a l'última fila
+                    coronacio(filaDestinacio, columnaDestinacio);
+
                 } catch (Exception e) {
-                    System.out.println("Entrada invàlida, prova de nou: " + e.getMessage());
+                    System.out.println("Entrada invàlida");
                 }
             }
         } while (!gameover);
     }
 
-    static void imprimirTauler() {
-        try {
-            for (int fila = 0; fila < 8; fila++) {
-                System.out.print((fila + 1) + "  ");
-                for (int columna = 0; columna < 8; columna++) {
-                    String fons = ((fila + columna) % 2 == 0) ? "\u001B[47m" : "\u001B[40m";
-                    char peça = tauler[fila][columna];
-                    String colorPeça = (peça == ' ') ? "\u001B[30m"
-                            : (Character.isUpperCase(peça) ? "\u001B[37m" : "\u001B[31m");
-                    System.out.print(fons + colorPeça + " " + peça + " " + "\u001B[0m");
-                }
-                System.out.println();
-            }
-            System.out.println("   a  b  c  d  e  f  g  h\n");
-        } catch (Exception e) {
-            System.out.println("Error imprimint el tauler: " + e.getMessage());
-        }
-    }
-
-    static boolean esBlanca(char peça) {
-        try {
-            return Character.isUpperCase(peça);
-        } catch (Exception e) {
-            System.out.println("Error comprovant color de peça");
-            return false;
-        }
-    }
-
-    static boolean potMoure(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio, char peça) {
-        try {
-            if (peça == ' ')
-                return false;
-            boolean blanca = esBlanca(peça);
-            char destinacio = tauler[filaDestinacio][columnaDestinacio];
-            if (destinacio != ' ' && esBlanca(destinacio) == blanca)
-                return false;
-
-            switch (Character.toLowerCase(peça)) {
-                case 'p':
-                    int direccio = blanca ? 1 : -1;
-                    if (columnaOrigen == columnaDestinacio && destinacio == ' '
-                            && filaDestinacio == filaOrigen + direccio)
-                        return true;
-                    if (columnaOrigen == columnaDestinacio && destinacio == ' ' &&
-                            ((blanca && filaOrigen == 1) || (!blanca && filaOrigen == 6)) &&
-                            filaDestinacio == filaOrigen + 2 * direccio
-                            && tauler[filaOrigen + direccio][columnaOrigen] == ' ')
-                        return true;
-                    if (Math.abs(columnaOrigen - columnaDestinacio) == 1 &&
-                            filaDestinacio == filaOrigen + direccio &&
-                            destinacio != ' ' && esBlanca(destinacio) != blanca)
-                        return true;
-                    return false;
-                case 't':
-                    return lineaLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio);
-                case 'c':
-                    return (Math.abs(filaOrigen - filaDestinacio) == 2
-                            && Math.abs(columnaOrigen - columnaDestinacio) == 1) ||
-                            (Math.abs(filaOrigen - filaDestinacio) == 1
-                                    && Math.abs(columnaOrigen - columnaDestinacio) == 2);
-                case 'a':
-                    return diagonalLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio);
-                case 'q':
-                    return lineaLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio) ||
-                            diagonalLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio);
-                case 'k':
-                    return Math.abs(filaOrigen - filaDestinacio) <= 1
-                            && Math.abs(columnaOrigen - columnaDestinacio) <= 1;
-            }
-        } catch (Exception e) {
-            System.out.println("Error comprovant moviment: " + e.getMessage());
-        }
-        return false;
-    }
-
-    static boolean potCapturar(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio,
-            char peça) {
-        try {
-            char destinacio = tauler[filaDestinacio][columnaDestinacio];
-            return destinacio != ' ' && esBlanca(destinacio) != esBlanca(peça) &&
-                    potMoure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, peça);
-        } catch (Exception e) {
-            System.out.println("Error comprovant captura: " + e.getMessage());
-            return false;
-        }
-    }
-
-    static boolean lineaLliure(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio) {
-        try {
-            if (filaOrigen != filaDestinacio && columnaOrigen != columnaDestinacio)
-                return false;
-            int incrementFila = Integer.compare(filaDestinacio, filaOrigen);
-            int incrementColumna = Integer.compare(columnaDestinacio, columnaOrigen);
-            int fila = filaOrigen + incrementFila;
-            int columna = columnaOrigen + incrementColumna;
-            while (fila != filaDestinacio || columna != columnaDestinacio) {
-                if (tauler[fila][columna] != ' ')
-                    return false;
-                fila += incrementFila;
-                columna += incrementColumna;
-            }
-        } catch (Exception e) {
-            System.out.println("Error comprovant línia lliure: " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    static boolean diagonalLliure(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio) {
-        try {
-            if (Math.abs(filaDestinacio - filaOrigen) != Math.abs(columnaDestinacio - columnaOrigen))
-                return false;
-            int incrementFila = (filaDestinacio - filaOrigen) / Math.abs(filaDestinacio - filaOrigen);
-            int incrementColumna = (columnaDestinacio - columnaOrigen) / Math.abs(columnaDestinacio - columnaOrigen);
-            int fila = filaOrigen + incrementFila;
-            int columna = columnaOrigen + incrementColumna;
-            while (fila != filaDestinacio && columna != columnaDestinacio) {
-                if (tauler[fila][columna] != ' ')
-                    return false;
-                fila += incrementFila;
-                columna += incrementColumna;
-            }
-        } catch (Exception e) {
-            System.out.println("Error comprovant diagonal lliure: " + e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
+    // Comprovar si el rei està en escac
     static boolean estaEnEscac(int torn) {
         try {
             int reiFila = -1, reiColumna = -1;
@@ -258,8 +149,13 @@ public class pe7 {
         return false;
     }
 
+    // Comprovar si és escac i mat
     static boolean esEscacIMat(int torn) {
         try {
+            // Si el rei no està en escac, no pot ser mat
+            if (!estaEnEscac(torn))
+                return false;
+
             for (int fila = 0; fila < 8; fila++) {
                 for (int columna = 0; columna < 8; columna++) {
                     char peça = tauler[fila][columna];
@@ -267,18 +163,27 @@ public class pe7 {
                         continue;
                     if (esBlanca(peça) != (torn == 0))
                         continue;
+
                     for (int filaDest = 0; filaDest < 8; filaDest++) {
                         for (int columnaDest = 0; columnaDest < 8; columnaDest++) {
-                            if (!potMoure(fila, filaDest, columna, columnaDest, peça) &&
-                                    !potCapturar(fila, filaDest, columna, columnaDest, peça))
+                            if (!potMoure(fila, columna, filaDest, columnaDest, peça) &&
+                                    !potCapturar(fila, columna, filaDest, columnaDest, peça))
                                 continue;
+
                             char origen = tauler[fila][columna];
                             char destinacio = tauler[filaDest][columnaDest];
+
+                            // Simular moviment
                             tauler[filaDest][columnaDest] = origen;
                             tauler[fila][columna] = ' ';
+
                             boolean escac = estaEnEscac(torn);
+
+                            // Desfer moviment
                             tauler[fila][columna] = origen;
                             tauler[filaDest][columnaDest] = destinacio;
+
+                            // Si hi ha algun moviment que treu al rei de l'escac, no és mat
                             if (!escac)
                                 return false;
                         }
@@ -291,111 +196,265 @@ public class pe7 {
         return true;
     }
 
-    static boolean potEnrocar(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio, char rei) {
-        try {
-            boolean blanca = esBlanca(rei);
-            if (estaEnEscac(blanca ? 0 : 1))
-                return false;
+    // Demanar nom jugador
+    static String demanarNomJugador(String missatge) {
+        String nom;
+        do {
+            System.out.print(missatge);
+            nom = scanner.nextLine().trim();
+        } while (nom.isEmpty());
+        return nom;
+    }
 
-            if (columnaDestinacio - columnaOrigen == 2) {
-                if (blanca && (reiBlancMoviment || torreBlancaHMoviment))
-                    return false;
-                if (!blanca && (reiNegreMoviment || torreNegreHMoviment))
-                    return false;
-                if (tauler[filaOrigen][columnaOrigen + 1] != ' ' || tauler[filaOrigen][columnaOrigen + 2] != ' ')
-                    return false;
-                if (estaEnEscacEnCasella(filaOrigen, columnaOrigen + 1, blanca) ||
-                        estaEnEscacEnCasella(filaOrigen, columnaOrigen + 2, blanca))
-                    return false;
-                return true;
+    // Funcions auxiliars
+    // Imprimir el tauler amb colors
+    static void imprimirTauler() {
+        for (int fila = 0; fila < 8; fila++) {
+            System.out.print((fila + 1) + "  ");
+            for (int columna = 0; columna < 8; columna++) {
+                String fons = ((fila + columna) % 2 == 0) ? "\u001B[47m" : "\u001B[40m";
+                char peça = tauler[fila][columna];
+                String colorPeça = (peça == ' ') ? "\u001B[30m"
+                        : (Character.isUpperCase(peça) ? "\u001B[37m" : "\u001B[31m");
+                System.out.print(fons + colorPeça + " " + peça + " " + "\u001B[0m");
             }
-            if (columnaDestinacio - columnaOrigen == -2) {
-                if (blanca && (reiBlancMoviment || torreBlancaAMoviment))
-                    return false;
-                if (!blanca && (reiNegreMoviment || torreNegreAMoviment))
-                    return false;
-                if (tauler[filaOrigen][columnaOrigen - 1] != ' ' || tauler[filaOrigen][columnaOrigen - 2] != ' '
-                        || tauler[filaOrigen][columnaOrigen - 3] != ' ')
-                    return false;
-                if (estaEnEscacEnCasella(filaOrigen, columnaOrigen - 1, blanca) ||
-                        estaEnEscacEnCasella(filaOrigen, columnaOrigen - 2, blanca))
-                    return false;
-                return true;
-            }
-        } catch (Exception e) {
-            System.out.println("Error comprovant enroc: " + e.getMessage());
+            System.out.println();
+        }
+        System.out.println("    a  b  c  d  e  f  g  h\n");
+
+        mostrarPecesCapturades();
+    }
+
+    // Mostrar peces capturades amb colors
+    static void mostrarPecesCapturades() {
+        System.out.print("Peces capturades: ");
+        for (char peça : pecesCapturades) {
+            String color = Character.isUpperCase(peça) ? "\u001B[37m" : "\u001B[31m";
+            System.out.print(color + peça + " " + "\u001B[0m");
+        }
+        System.out.println("\n");
+    }
+
+    // Comprovar si una peça és blanca
+    static boolean esBlanca(char peça) {
+        return Character.isUpperCase(peça);
+    }
+
+    // Comprovar si una peça pot moure's a una destinació
+    static boolean potMoure(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio, char peça) {
+        if (peça == ' ')
+            return false;
+
+        boolean blanca = esBlanca(peça);
+        char destinacio = tauler[filaDestinacio][columnaDestinacio];
+        if (destinacio != ' ' && esBlanca(destinacio) == blanca)
+            return false;
+
+        switch (Character.toLowerCase(peça)) {
+            case 'p':
+                int direccio = blanca ? 1 : -1;
+                if (columnaOrigen == columnaDestinacio && destinacio == ' ' &&
+                        filaDestinacio == filaOrigen + direccio)
+                    return true;
+                if (columnaOrigen == columnaDestinacio && destinacio == ' ' &&
+                        ((blanca && filaOrigen == 1) || (!blanca && filaOrigen == 6)) &&
+                        filaDestinacio == filaOrigen + 2 * direccio &&
+                        tauler[filaOrigen + direccio][columnaOrigen] == ' ')
+                    return true;
+                if (Math.abs(columnaOrigen - columnaDestinacio) == 1 &&
+                        filaDestinacio == filaOrigen + direccio &&
+                        destinacio != ' ' && esBlanca(destinacio) != blanca)
+                    return true;
+                return false;
+            case 't':
+                return lineaLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio);
+            case 'c':
+                return (Math.abs(filaOrigen - filaDestinacio) == 2 && Math.abs(columnaOrigen - columnaDestinacio) == 1)
+                        ||
+                        (Math.abs(filaOrigen - filaDestinacio) == 1
+                                && Math.abs(columnaOrigen - columnaDestinacio) == 2);
+            case 'a':
+                return diagonalLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio);
+            case 'q':
+                return lineaLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio) ||
+                        diagonalLliure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio);
+            case 'k':
+                return Math.abs(filaOrigen - filaDestinacio) <= 1 && Math.abs(columnaOrigen - columnaDestinacio) <= 1;
         }
         return false;
     }
 
+    // Comprovar si una peça pot capturar a una destinació
+    static boolean potCapturar(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio,
+            char peça) {
+        char destinacio = tauler[filaDestinacio][columnaDestinacio];
+        return destinacio != ' ' && esBlanca(destinacio) != esBlanca(peça) &&
+                potMoure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, peça);
+    }
+
+    // Comprovar si la línia entre origen i destinació està lliure
+    static boolean lineaLliure(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio) {
+        if (filaOrigen != filaDestinacio && columnaOrigen != columnaDestinacio)
+            return false;
+
+        int incFila = Integer.compare(filaDestinacio, filaOrigen);
+        int incCol = Integer.compare(columnaDestinacio, columnaOrigen);
+
+        int fila = filaOrigen + incFila;
+        int col = columnaOrigen + incCol;
+
+        while (fila != filaDestinacio || col != columnaDestinacio) {
+            if (tauler[fila][col] != ' ')
+                return false;
+            fila += incFila;
+            col += incCol;
+        }
+        return true;
+    }
+
+    // Comprovar si la diagonal entre origen i destinació està lliure
+    static boolean diagonalLliure(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio) {
+        if (Math.abs(filaDestinacio - filaOrigen) != Math.abs(columnaDestinacio - columnaOrigen))
+            return false;
+
+        int incFila = Integer.compare(filaDestinacio, filaOrigen);
+        int incCol = Integer.compare(columnaDestinacio, columnaOrigen);
+
+        int fila = filaOrigen + incFila;
+        int col = columnaOrigen + incCol;
+
+        while (fila != filaDestinacio || col != columnaDestinacio) {
+            if (tauler[fila][col] != ' ')
+                return false;
+            fila += incFila;
+            col += incCol;
+        }
+        return true;
+    }
+
+    // Comprovar si es pot enrocar
+    static boolean potEnrocar(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio, char rei) {
+        boolean blanca = esBlanca(rei);
+        if (estaEnEscac(blanca ? 0 : 1))
+            return false;
+
+        if (columnaDestinacio - columnaOrigen == 2) {
+            if (blanca && (reiBlancMoviment || torreBlancaHMoviment))
+                return false;
+            if (!blanca && (reiNegreMoviment || torreNegreHMoviment))
+                return false;
+            if (tauler[filaOrigen][columnaOrigen + 1] != ' ' || tauler[filaOrigen][columnaOrigen + 2] != ' ')
+                return false;
+            if (estaEnEscacEnCasella(filaOrigen, columnaOrigen + 1, blanca) ||
+                    estaEnEscacEnCasella(filaOrigen, columnaOrigen + 2, blanca))
+                return false;
+            return true;
+        }
+        if (columnaDestinacio - columnaOrigen == -2) {
+            if (blanca && (reiBlancMoviment || torreBlancaAMoviment))
+                return false;
+            if (!blanca && (reiNegreMoviment || torreNegreAMoviment))
+                return false;
+            if (tauler[filaOrigen][columnaOrigen - 1] != ' ' || tauler[filaOrigen][columnaOrigen - 2] != ' ' ||
+                    tauler[filaOrigen][columnaOrigen - 3] != ' ')
+                return false;
+            if (estaEnEscacEnCasella(filaOrigen, columnaOrigen - 1, blanca) ||
+                    estaEnEscacEnCasella(filaOrigen, columnaOrigen - 2, blanca))
+                return false;
+            return true;
+        }
+        return false;
+    }
+
+    // Realitzar l'enroc
     static void realitzarEnroque(int filaOrigen, int columnaOrigen, int filaDestinacio, int columnaDestinacio,
             char rei) {
-        try {
-            boolean blanca = esBlanca(rei);
-            tauler[filaDestinacio][columnaDestinacio] = rei;
-            tauler[filaOrigen][columnaOrigen] = ' ';
-            if (columnaDestinacio - columnaOrigen == 2) {
-                char torre = tauler[filaOrigen][7];
-                tauler[filaOrigen][columnaOrigen + 1] = torre;
-                tauler[filaOrigen][7] = ' ';
-            } else if (columnaDestinacio - columnaOrigen == -2) {
-                char torre = tauler[filaOrigen][0];
-                tauler[filaOrigen][columnaOrigen - 1] = torre;
-                tauler[filaOrigen][0] = ' ';
-            }
-            if (blanca) {
-                reiBlancMoviment = true;
-                if (columnaDestinacio - columnaOrigen == 2)
-                    torreBlancaHMoviment = true;
-                else
-                    torreBlancaAMoviment = true;
-            } else {
-                reiNegreMoviment = true;
-                if (columnaDestinacio - columnaOrigen == 2)
-                    torreNegreHMoviment = true;
-                else
-                    torreNegreAMoviment = true;
-            }
-        } catch (Exception e) {
-            System.out.println("Error realitzant enroc: " + e.getMessage());
+        boolean blanca = esBlanca(rei);
+        tauler[filaDestinacio][columnaDestinacio] = rei;
+        tauler[filaOrigen][columnaOrigen] = ' ';
+        if (columnaDestinacio - columnaOrigen == 2) {
+            char torre = tauler[filaOrigen][7];
+            tauler[filaOrigen][columnaOrigen + 1] = torre;
+            tauler[filaOrigen][7] = ' ';
+        } else if (columnaDestinacio - columnaOrigen == -2) {
+            char torre = tauler[filaOrigen][0];
+            tauler[filaOrigen][columnaOrigen - 1] = torre;
+            tauler[filaOrigen][0] = ' ';
+        }
+        if (blanca) {
+            reiBlancMoviment = true;
+            if (columnaDestinacio - columnaOrigen == 2)
+                torreBlancaHMoviment = true;
+            else
+                torreBlancaAMoviment = true;
+        } else {
+            reiNegreMoviment = true;
+            if (columnaDestinacio - columnaOrigen == 2)
+                torreNegreHMoviment = true;
+            else
+                torreNegreAMoviment = true;
         }
     }
 
+    // Comprovar si una casella està en escac
     static boolean estaEnEscacEnCasella(int fila, int columna, boolean blanca) {
-        try {
-            for (int filaP = 0; filaP < 8; filaP++) {
-                for (int columnaP = 0; columnaP < 8; columnaP++) {
-                    char peça = tauler[filaP][columnaP];
-                    if (peça == ' ')
-                        continue;
-                    if (esBlanca(peça) == blanca)
-                        continue;
-                    if (potCapturar(filaP, columnaP, fila, columna, peça))
-                        return true;
-                }
+        for (int filaP = 0; filaP < 8; filaP++) {
+            for (int columnaP = 0; columnaP < 8; columnaP++) {
+                char peça = tauler[filaP][columnaP];
+                if (peça == ' ')
+                    continue;
+                if (esBlanca(peça) == blanca)
+                    continue;
+                if (potCapturar(filaP, columnaP, fila, columna, peça))
+                    return true;
             }
-        } catch (Exception e) {
-            System.out.println("Error comprovant escac en casella: " + e.getMessage());
         }
         return false;
     }
 
+    // Actualitzar les flags de moviment de rei i torres
     static void actualitzarFlags(char peça, int filaOrigen, int columnaOrigen) {
-        try {
-            if (peça == 'K')
-                reiBlancMoviment = true;
-            else if (peça == 'k')
-                reiNegreMoviment = true;
-            else if (peça == 'T' && filaOrigen == 0 && columnaOrigen == 0)
-                torreBlancaAMoviment = true;
-            else if (peça == 'T' && filaOrigen == 0 && columnaOrigen == 7)
-                torreBlancaHMoviment = true;
-            else if (peça == 't' && filaOrigen == 7 && columnaOrigen == 0)
-                torreNegreAMoviment = true;
-            else if (peça == 't' && filaOrigen == 7 && columnaOrigen == 7)
-                torreNegreHMoviment = true;
-        } catch (Exception e) {
-            System.out.println("Error actualitzant flags: " + e.getMessage());
+        if (peça == 'K')
+            reiBlancMoviment = true;
+        else if (peça == 'k')
+            reiNegreMoviment = true;
+        else if (peça == 'T' && filaOrigen == 0 && columnaOrigen == 0)
+            torreBlancaAMoviment = true;
+        else if (peça == 'T' && filaOrigen == 0 && columnaOrigen == 7)
+            torreBlancaHMoviment = true;
+        else if (peça == 't' && filaOrigen == 7 && columnaOrigen == 0)
+            torreNegreAMoviment = true;
+        else if (peça == 't' && filaOrigen == 7 && columnaOrigen == 7)
+            torreNegreHMoviment = true;
+    }
+
+    // Funció de coronació de peó
+    static void coronacio(int fila, int columna) {
+        char peça = tauler[fila][columna];
+        if (Character.toLowerCase(peça) != 'p')
+            return;
+
+        if (peça == 'P' && fila == 7)
+            tauler[fila][columna] = escollirPeçaCoronacio(true);
+        if (peça == 'p' && fila == 0)
+            tauler[fila][columna] = escollirPeçaCoronacio(false);
+    }
+
+    // Funció per escollir peça en la coronació
+    static char escollirPeçaCoronacio(boolean blanca) {
+        while (true) {
+            System.out.print("Coronació! Tria (Q) Reina, (T) Torre, (A) Alfil, (C) Cavall: ");
+            String entrada = scanner.nextLine().toUpperCase();
+            if (entrada.length() != 1)
+                continue;
+            char opcio = entrada.charAt(0);
+            switch (opcio) {
+                case 'Q':
+                case 'T':
+                case 'A':
+                case 'C':
+                    return blanca ? opcio : Character.toLowerCase(opcio);
+            }
         }
     }
 }
