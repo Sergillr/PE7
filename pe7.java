@@ -4,7 +4,7 @@ import java.util.ArrayList;
 public class pe7 {
 
     // Tauler inicial (No utilitzo for per el debugging més fàcil XD)
-    static char[][] tauler = {
+    static char[][] taulerInicial = {
             { 'T', 'C', 'A', 'Q', 'K', 'A', 'C', 'T' },
             { 'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P' },
             { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' },
@@ -15,13 +15,15 @@ public class pe7 {
             { 't', 'c', 'a', 'q', 'k', 'a', 'c', 't' }
     };
 
+    static char[][] tauler;
+
     // Inici de variables de control de joc i historial
-    static boolean gameover = false;
-    static boolean reiBlancMoviment = false, reiNegreMoviment = false;
-    static boolean torreBlancaAMoviment = false, torreBlancaHMoviment = false;
-    static boolean torreNegreAMoviment = false, torreNegreHMoviment = false;
-    static ArrayList<Character> pecesCapturades = new ArrayList<>();
-    static ArrayList<String> historialMoviments = new ArrayList<>();
+    static boolean gameover;
+    static boolean reiBlancMoviment, reiNegreMoviment;
+    static boolean torreBlancaAMoviment, torreBlancaHMoviment;
+    static boolean torreNegreAMoviment, torreNegreHMoviment;
+    static ArrayList<Character> pecesCapturades;
+    static ArrayList<String> historialMoviments;
     static Scanner scanner = new Scanner(System.in);
     static String jugadorBlanc;
     static String jugadorNegre;
@@ -31,95 +33,153 @@ public class pe7 {
         System.out.println("Benvingut al joc d'escacs!");
         scanner.nextLine();
 
-        jugadorBlanc = demanarNomJugador("Nom del jugador blanc: ");
-        jugadorNegre = demanarNomJugador("Nom del jugador negre: ");
+        boolean seguirJugant = true;
+        boolean mateixosJugadors = false;
 
-        System.out.println("En cas de voler abandonar el joc, escriu 'Abandonar'");
-        scanner.nextLine();
+        while (seguirJugant) {
 
-        System.out.println("Format de moviment: AX BY (lletra columna + número fila)");
-        System.out.println("BLAQUES comencen primer.\n");
-
-        int torn = 0;
-
-        // Bucle principal del joc
-        do {
-            imprimirTauler();
-
-            if (!gameover) {
-                System.out.println("Torn de " + (torn == 0 ? jugadorBlanc : jugadorNegre));
-                System.out.print("Moviment: ");
-                String moviment = scanner.nextLine();
-
-                if (moviment.equalsIgnoreCase("Abandonar")) {
-                    gameover = true;
-                    break;
-                }
-
-                if (moviment.length() != 5 || moviment.charAt(2) != ' ')
-                    continue;
-
-                try {
-                    int filaOrigen = Character.getNumericValue(moviment.charAt(1)) - 1;
-                    int columnaOrigen = moviment.charAt(0) - 'a';
-                    int filaDestinacio = Character.getNumericValue(moviment.charAt(4)) - 1;
-                    int columnaDestinacio = moviment.charAt(3) - 'a';
-
-                    char origen = tauler[filaOrigen][columnaOrigen];
-                    char destinacio = tauler[filaDestinacio][columnaDestinacio];
-
-                    if ((torn == 0 && !esBlanca(origen)) || (torn == 1 && esBlanca(origen))) {
-                        System.out.println("No es el torn de aquestes peces");
-                        continue;
-                    }
-
-                    if (!potMoure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen) &&
-                            !potCapturar(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen)) {
-                        System.out.println("Moviment invàlid");
-                        continue;
-                    }
-
-                    // Simular moviment per comprovar si deixa el rei en escac
-                    tauler[filaDestinacio][columnaDestinacio] = origen;
-                    tauler[filaOrigen][columnaOrigen] = ' ';
-
-                    if (estaEnEscac(torn)) {
-                        tauler[filaOrigen][columnaOrigen] = origen;
-                        tauler[filaDestinacio][columnaDestinacio] = destinacio;
-                        System.out.println("No pots deixar el teu rei en escac");
-                        continue;
-                    }
-
-                    // Guardar peça capturada
-                    if (destinacio != ' ') {
-                        pecesCapturades.add(destinacio);
-                    }
-
-                    historialMoviments.add(moviment);
-
-                    // Actualitzar flags de moviment de rei i torres
-                    actualitzarFlags(origen, filaOrigen, columnaOrigen);
-
-                    torn = 1 - torn;
-
-                    // Comprovar escac i mat després del moviment
-                    if (esEscacIMat(torn)) {
-                        imprimirTauler();
-                        System.out.println("ESCAC I MAT!");
-                        System.out.println("Guanya " + (torn == 0 ? jugadorNegre : jugadorBlanc) + "!");
-                        System.out.println("Historial de moviments: " + historialMoviments);
-                        gameover = true;
-                    }
-
-                    // Coronació si el peó arriba a l'última fila
-                    coronacio(filaDestinacio, columnaDestinacio);
-
-                } catch (Exception e) {
-                    System.out.println("Entrada invàlida");
-                }
+            if (!mateixosJugadors) {
+                jugadorBlanc = demanarNomJugador("Nom del jugador blanc: ");
+                jugadorNegre = demanarNomJugador("Nom del jugador negre: ");
             }
-        } while (!gameover);
+
+            inicialitzarPartida();
+
+            System.out.println("En cas de voler abandonar el joc, escriu 'Abandonar'");
+            scanner.nextLine();
+
+            System.out.println("Format de moviment: AX BY (lletra columna + número fila)");
+            System.out.println("BLAQUES comencen primer.\n");
+
+            int torn = 0;
+
+            // Bucle principal del joc
+            do {
+                imprimirTauler();
+
+                if (!gameover) {
+                    System.out.println("Torn de " + (torn == 0 ? jugadorBlanc : jugadorNegre));
+                    System.out.print("Moviment: ");
+                    String moviment = scanner.nextLine();
+
+                    if (moviment.equalsIgnoreCase("Abandonar")) {
+                        gameover = true;
+                        break;
+                    }
+
+                    if (moviment.length() != 5 || moviment.charAt(2) != ' ')
+                        continue;
+
+                    try {
+                        int filaOrigen = Character.getNumericValue(moviment.charAt(1)) - 1;
+                        int columnaOrigen = moviment.charAt(0) - 'a';
+                        int filaDestinacio = Character.getNumericValue(moviment.charAt(4)) - 1;
+                        int columnaDestinacio = moviment.charAt(3) - 'a';
+
+                        char origen = tauler[filaOrigen][columnaOrigen];
+                        char destinacio = tauler[filaDestinacio][columnaDestinacio];
+
+                        if ((torn == 0 && !esBlanca(origen)) || (torn == 1 && esBlanca(origen))) {
+                            System.out.println("No es el torn de aquestes peces");
+                            continue;
+                        }
+
+                        if (Character.toLowerCase(origen) == 'k'
+                                && filaOrigen == filaDestinacio
+                                && Math.abs(columnaDestinacio - columnaOrigen) == 2) {
+
+                            if (potEnrocar(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen)) {
+                                realitzarEnroque(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen);
+                                historialMoviments.add(moviment);
+                                torn = 1 - torn;
+                                continue;
+                            } else {
+                                System.out.println("Moviment invàlid");
+                                continue;
+                            }
+                        }
+
+                        if (!potMoure(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen) &&
+                                !potCapturar(filaOrigen, columnaOrigen, filaDestinacio, columnaDestinacio, origen)) {
+                            System.out.println("Moviment invàlid");
+                            continue;
+                        }
+
+                        tauler[filaDestinacio][columnaDestinacio] = origen;
+                        tauler[filaOrigen][columnaOrigen] = ' ';
+
+                        if (estaEnEscac(torn)) {
+                            tauler[filaOrigen][columnaOrigen] = origen;
+                            tauler[filaDestinacio][columnaDestinacio] = destinacio;
+                            System.out.println("No pots deixar el teu rei en escac");
+                            continue;
+                        }
+
+                        if (destinacio != ' ') {
+                            pecesCapturades.add(destinacio);
+                        }
+
+                        historialMoviments.add(moviment);
+                        actualitzarFlags(origen, filaOrigen, columnaOrigen);
+                        torn = 1 - torn;
+
+                        if (esEscacIMat(torn)) {
+                            imprimirTauler();
+                            System.out.println("ESCAC I MAT!");
+                            System.out.println("Guanya " + (torn == 0 ? jugadorNegre : jugadorBlanc) + "!");
+                            System.out.println("Historial de moviments: " + historialMoviments);
+                            gameover = true;
+                        }
+
+                        coronacio(filaDestinacio, columnaDestinacio);
+
+                    } catch (Exception e) {
+                        System.out.println("Entrada invàlida");
+                    }
+                }
+            } while (!gameover);
+
+            seguirJugant = preguntarSiNo("Voleu jugar una altra partida? (s/n): ");
+            if (seguirJugant) {
+                mateixosJugadors = preguntarSiNo("Són els mateixos jugadors? (s/n): ");
+            }
+        }
     }
+
+    // Inicialitzar estat de partida
+    static void inicialitzarPartida() {
+        tauler = new char[8][8];
+        for (int i = 0; i < 8; i++)
+            System.arraycopy(taulerInicial[i], 0, tauler[i], 0, 8);
+
+        gameover = false;
+        reiBlancMoviment = reiNegreMoviment = false;
+        torreBlancaAMoviment = torreBlancaHMoviment = false;
+        torreNegreAMoviment = torreNegreHMoviment = false;
+        pecesCapturades = new ArrayList<>();
+        historialMoviments = new ArrayList<>();
+    }
+
+    // Pregunta sí/no
+    static boolean preguntarSiNo(String missatge) {
+        while (true) {
+            System.out.print(missatge);
+            String r = scanner.nextLine().trim().toLowerCase();
+            if (r.equals("s")) return true;
+            if (r.equals("n")) return false;
+        }
+    }
+
+    // Demanar nom jugador
+    static String demanarNomJugador(String missatge) {
+        String nom;
+        do {
+            System.out.print(missatge);
+            nom = scanner.nextLine().trim();
+        } while (nom.isEmpty());
+        return nom;
+    }
+
 
     // Comprovar si el rei està en escac
     static boolean estaEnEscac(int torn) {
@@ -196,15 +256,6 @@ public class pe7 {
         return true;
     }
 
-    // Demanar nom jugador
-    static String demanarNomJugador(String missatge) {
-        String nom;
-        do {
-            System.out.print(missatge);
-            nom = scanner.nextLine().trim();
-        } while (nom.isEmpty());
-        return nom;
-    }
 
     // Funcions auxiliars
     // Imprimir el tauler amb colors
