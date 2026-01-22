@@ -5,7 +5,7 @@ public class pe7 {
 
     // Tauler inicial (No utilitzo for per el debugging més fàcil XD)
     static char[][] taulerInicial = {
-            { 'T', 'C', 'A', 'Q', 'K', 'A', 'C', 'T' },
+            { 'T', ' ', ' ', ' ', 'K', ' ', ' ', 'T' },
             { 'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P' },
             { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' },
             { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' },
@@ -60,7 +60,7 @@ public class pe7 {
                 if (!gameover) {
                     System.out.println("Torn de " + (torn == 0 ? jugadorBlanc : jugadorNegre));
                     System.out.print("Moviment: ");
-                    String moviment = scanner.nextLine();
+                    String moviment = scanner.nextLine().toLowerCase();
 
                     if (moviment.equalsIgnoreCase("Abandonar")) {
                         gameover = true;
