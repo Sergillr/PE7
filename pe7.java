@@ -534,8 +534,8 @@ public class pe7 {
     }
 
     // Converteix les coordenades a format de cadena
-    public String coordsAString(int filaOrigen, int colimnaOrigen, int filaDesti, int columnaDesti) {
-        return "" + (char) ('a' + colimnaOrigen) + (filaOrigen + 1) + " " + (char) ('a' + columnaDesti)
+    public String coordsAString(int filaOrigen, int columnaOrigen, int filaDesti, int columnaDesti) {
+        return "" + (char) ('a' + columnaOrigen) + (filaOrigen + 1) + " " + (char) ('a' + columnaDesti)
                 + (filaDesti + 1);
     }
 
